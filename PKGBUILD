@@ -1,52 +1,197 @@
-# Programmer: varmd
-# Maintainer: abelian424
+# Created by: varmd
 
 pkgname=wine-wayland
-pkgver=6.0.0.rc3
-pkgrel=2
-_pkgver=6.0rc3-1
-pkgdesc='Wine-wayland allows running DX9/DX11 and Vulkan games using pure wayland and Wine/DXVK'
+pkgver=4.21
+pkgrel=75
+_winesrcdir='wine-wine-4.21'
+_esyncsrcdir='esync'
+_where=$PWD
+
+pkgdesc=''
+
+url=''
 arch=('x86_64')
-url='https://github.com/varmd/wine-wayland'
+
+options=('staticlibs' '!strip')
+
 license=('LGPL')
-depends=( )
-makedepends=( )
-optdepends=( )
-#depends=(desktop-file-utils faudio fontconfig freetype2 glu lcms2
-#  libpcap libsm libxcursor libxdamage libxi libxml2 libxrandr
-#  lib32-faudio lib32-fontconfig lib32-freetype2 lib32-gcc-libs
-#  lib32-gettext lib32-glu lib32-lcms2 lib32-libpcap lib32-libsm
-#  lib32-libxcursor lib32-libxdamage lib32-libxi lib32-libxml2
-#  lib32-libxrandr)
-#makedepends=(alsa-lib fontforge giflib gnutls gsm
-#  gst-plugins-base-libs libcups libgl libgphoto2 libldap libpng
-#  libpulse libxcomposite libxinerama libxmu libxslt libxxf86vm mesa
-#  mingw-w64-gcc mpg123 ncurses ocl-icd openal opencl-headers perl
-#  samba sane sdl2 v4l-utils vkd3d vulkan-headers vulkan-icd-loader
-#  lib32-alsa-lib lib32-giflib lib32-gnutls lib32-gst-plugins-base-libs
-#  lib32-libcups lib32-libgl lib32-libldap lib32-libpng lib32-libpulse
-#  lib32-libxcomposite lib32-libxinerama lib32-libxmu lib32-libxslt
-#  lib32-libxxf86vm lib32-mesa lib32-mpg123 lib32-ncurses lib32-ocl-icd
-#  lib32-openal lib32-sdl2 lib32-v4l-utils lib32-vkd3d
-#  lib32-vulkan-icd-loader)
-#optdepends=(alsa-lib alsa-plugins dosbox giflib gnutls gsm
-#  gst-plugins-base-libs libcups libgphoto2 libjpeg-turbo libldap
-#  libpng libpulse libxcomposite libxinerama libxslt mpg123 ncurses
-#  ocl-icd openal samba sane sdl2 v4l-utils vkd3d vulkan-icd-loader
-#  lib32-alsa-lib lib32-alsa-plugins lib32-giflib lib32-gnutls
-#  lib32-gst-plugins-base-libs lib32-libcups lib32-libjpeg-turbo
-#  lib32-libldap lib32-libpng lib32-libpulse lib32-libxcomposite
-#  lib32-libxinerama lib32-libxslt lib32-mpg123 lib32-ncurses
-#  lib32-ocl-icd lib32-openal lib32-sdl2 lib32-v4l-utils lib32-vkd3d
-#  lib32-vulkan-icd-loader)
-provides=('wine')
-conflicts=('wine')
-source=("https://github.com/varmd/wine-wayland/releases/download/v$pkgver.$pkgrel/$pkgname-$_pkgver-x86_64.pkg.tar.zst"
-"https://github.com/varmd/wine-wayland/releases/download/v$pkgver.$pkgrel/lib32-$pkgname-$_pkgver-x86_64.pkg.tar.zst")
-md5sums=('8f79f98f8d4390bc5e93664cc38e57e1'
-         '37c3b2b5010ce6e856d262857ebdb4d4')
+
+depends=(
+    'fontconfig'            
+    'libxml2'              
+    'freetype2'             
+    'gcc-libs'              
+    'desktop-file-utils'
+    'gnutls'
+)
+
+makedepends=('git' 
+    'autoconf' 
+    'ncurses' 
+    'bison' 
+    'perl' 
+    'flex'
+    'gcc'
+    'libpng'                
+    'gnutls'                
+            
+    'mpg123'                
+    'openal'    
+    'alsa-lib'             
+        
+    'mesa'
+    'vulkan-icd-loader'    
+    'vulkan-headers'    
+                 
+    'freetype2'             
+    'gettext'               
+    'libxml2'               
+    'fontconfig'            
+    'faudio'            
+)
+
+
+source=("https://github.com/wine-mirror/wine/archive/wine-4.21.zip")
+    
+sha256sums=('SKIP')
+
+
+conflicts=('wine' 'wine-staging' 'wine-esync')
+
+OPTIONS=(!strip !docs !libtool !zipman !purge !debug) 
+makedepends=(${makedepends[@]} ${depends[@]})
+
+
+
+prepare() {
+
+
+  cd ..
+  rm -f "${srcdir}"/"${_winesrcdir}"/dlls/winewayland*
+  ln -s $PWD/winewayland* "${srcdir}"/"${_winesrcdir}"/dlls/
+  
+  cd "${srcdir}"/"${_winesrcdir}"
+  
+  patch -Np1 < '../../enable-wayland.patch'  
+  
+  patch dlls/user32/driver.c < ../../winewayland.drv/patch/user32-driverc.patch
+  patch dlls/user32/sysparams.c < ../../winewayland.drv/patch/user32-sysparamsc.patch
+  patch programs/explorer/desktop.c < ../../winewayland.drv/patch/explorer-desktopc.patch
+  
+	
+	cd "${srcdir}"/"${_winesrcdir}"
+
+  rm configure
+  autoconf
+
+
+  
+  
+  msg2 "Applying esync patches"
+    cd "${srcdir}"
+    cp -r ../esync .
+    cd "${srcdir}"/"${_winesrcdir}"
+    for _f in "${srcdir}"/"${_esyncsrcdir}"/*.patch; do
+      msg2 "Applying ${_f}"
+      git apply -C1 --verbose < ${_f}
+      #patch -Np1 < ${_f}
+    done
+  
+  
+  msg2 "Applying esync temp fix"
+  patch -Np1 < '../../esync-no_kernel_obj_list.patch'  
+  
+  msg2 "Applying fsync"
+  patch -Np1 < '../../fsync-mainline.patch'  
+  #git apply -C1 --verbose < '../../fsync-mainline.patch'  
+  
+  
+	
+
+	
+
+
+	
+	# create new build dirs
+	mkdir -p "${srcdir}"/"${pkgname}"-64-build
+	
+}
+
+
+
+
+build() {
+	cd "${srcdir}"
+  
+  export COMMON_FLAGS="-w -march=native -pipe -Os"
+  export LDFLAGS="-Os"
+	
+	export CFLAGS="${CFLAGS} -w"
+	
+
+
+  msg2 'Building Wine-64...'
+	cd  "${srcdir}"/"${pkgname}"-64-build
+	
+  
+  
+  #if [0]; then
+  
+  ../${_winesrcdir}/configure \
+		--prefix='/usr' \
+		--libdir='/usr/lib' \
+		--without-x \
+		--without-dbus \
+		--without-gphoto \
+		--without-gstreamer \
+		--without-gssapi \
+		--without-udev \
+		--without-netapi \
+		--without-hal \
+    --without-gsm \
+    --without-opencl \
+    --with-opengl \
+    --without-sdl \
+    --without-cups \
+    --without-cms \
+    --without-vkd3d \
+    --without-xinerama \
+    --without-xrandr \
+    --without-sane \
+    --without-osmesa \
+    --without-gettext \
+    --without-fontconfig \
+    --without-cups \
+    --disable-win16 \
+    --without-gphoto \
+    --without-glu \
+    --without-xcomposite \
+    --without-xcursor \
+    --without-hal \
+    --without-xfixes \
+    --without-xshape \
+    --without-xrender \
+    --without-xinput \
+    --without-xinput2 \
+    --without-xrender \
+    --without-xxf86vm \
+    --without-xshm \
+    --with-vulkan \
+    --with-faudio \
+		--enable-win64 \
+    --without-netapi \
+		--disable-tests
+  #fi
+	
+	make -s -j 5
+
+}
 
 package() {
-     sudo pacman -U wine-wayland*pkg*
-     sudo pacman -U lib32-wine-wayland*pkg*
+	
+	cd "${srcdir}/${pkgname}"-64-build
+	make -s	prefix="${pkgdir}/usr" \
+			libdir="${pkgdir}/usr/lib" \
+			dlldir="${pkgdir}/usr/lib/wine" install
+
 }
