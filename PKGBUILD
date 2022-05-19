@@ -32,7 +32,6 @@ depends=(
   'alsa-lib'
   'mesa'
   'vulkan-icd-loader'
-
   'wayland'
   'wayland-protocols'
 )
@@ -49,7 +48,6 @@ makedepends=(
   'zstd'
 )
 
-
 source=(
   "https://github.com/wine-mirror/wine/archive/wine-$RELEASE.zip"
   "https://github.com/civetweb/civetweb/archive/v1.12.zip"
@@ -58,30 +56,10 @@ source=(
 
 sha256sums=('SKIP' 'SKIP' 'SKIP')
 
-
-STRBUILD32="builder"
-
-
-if [ "$USER" = "$STRBUILD32" ]; then
-  WINE_BUILD_32=1
-fi
-
-
-if [ -z "${WINE_BUILD_32:-}" ]; then
-  #msg2 "Not building wine 32"
-  D=1
-else
-  source ./PKGBUILD-32
-  #msg2 "Also building wine 32"
-fi
-
-
+source ./PKGBUILD-32
 
 OPTIONS=(!strip !docs !libtool !zipman !purge !debug)
 makedepends=(${makedepends[@]} ${depends[@]})
-
-
-
 
 build_sdl2() {
   cd "${srcdir}"
@@ -92,7 +70,6 @@ build_sdl2() {
 
   mkdir -p build
   cd build
-
 
   export PKG_CONFIG_PATH="$srcdir/sdl2-install/usr/lib/pkgconfig"
 
@@ -132,19 +109,12 @@ build_sdl2() {
   sed -i "s~/usr/include~${srcdir}/sdl2-install/usr/include~g" sdl2.pc
 }
 
-
-
-
-
-
 prepare() {
-
   if [ -e "${srcdir}"/"${_winesrcdir}"/server/esync.c ]; then
     msg2 "Stale src/ folder. Delete src/ folder or run makepkg --noextract."
     exit;
   else
     cd ..
-
 
     rm -f "${srcdir}"/"${_winesrcdir}"/dlls/winewayland*
 
@@ -158,11 +128,7 @@ prepare() {
     #TODO remove when fixed in Wine
     patch -Np1 < '../../patches/fix-civ6.patch'
 
-
-
     patch programs/explorer/desktop.c < ../../patches/wayland-explorer.patch
-
-
 
     cd "${srcdir}"/"${_winesrcdir}"
 
@@ -170,11 +136,7 @@ prepare() {
     cp ../../patches/fsync/fsync-copy/ntdll/* dlls/ntdll/unix/
     cp ../../patches/fsync/fsync-copy/server/* server/
 
-
-
-
     cd "${srcdir}"/"${_winesrcdir}"
-
 
     cp ../../patches/fsync/fsync-copy/ntdll/* dlls/ntdll/unix/
     cp ../../patches/fsync/fsync-copy/server/* server/
@@ -196,11 +158,8 @@ prepare() {
       patch -Np1 < ${_f}
     done
 
-
     #fix -lrt compilation
     patch -Np1 < ../../patches/fsync/fix-rt.patch
-
-
 
     msg2 "Applying FSR patches"
     for _f in ../../patches/fsr/*.patch; do
@@ -208,9 +167,6 @@ prepare() {
       patch -Np1 < ${_f}
     done
     cp '../../patches/fsr/vulkan-fsr-include.c' dlls/winevulkan/
-
-
-
 
     # speed up
 
@@ -239,8 +195,6 @@ prepare() {
     sed -i '/programs\/spoolsv/d' configure.ac
     sed -i '/programs\/schtasks/d' configure.ac
     sed -i '/systeminfo/d' configure.ac
-
-
 
     #misc exe
     sed -i '/programs\/whoami/d' configure.ac
@@ -281,24 +235,14 @@ prepare() {
 
     sed -i '/dlls\/gameux/d' configure.ac
 
-
     rm configure
     autoconf
 
     mkdir -p "${srcdir}"/"${_pkgname}"-64-build
-
-
-
   fi
-
 }
 
-
-
-
 build() {
-
-
   if [ -z "${WINE_BUILD_32_DEV_SKIP_64:-}" ]; then
     echo "Building 64bit"
   else
@@ -363,12 +307,9 @@ build() {
     CPUS=8;
   fi
 	make -s -j $CPUS
-
 }
 
 package_wineland() {
-
-
   depends=(
     'adwaita-icon-theme'
     'fontconfig'
@@ -384,7 +325,6 @@ package_wineland() {
     'libxml2'
     'lib32-glibc'
   )
-
 
   #build civetweb for wineland
   cd $srcdir
@@ -402,20 +342,15 @@ package_wineland() {
 
   mkdir -p ${pkgdir}/usr/share/applications
   cp -r ../wineland/wineland.desktop ${pkgdir}/usr/share/applications/wineland.desktop
-
 }
 
 
 package_wine-wayland() {
-
-
-
   if [ -z "${WINE_BUILD_32_DEV_SKIP_64:-}" ]; then
     echo "Building 64bit"
   else
     return 0;
   fi
-
 
   depends=(
     'adwaita-icon-theme'
@@ -459,7 +394,4 @@ package_wine-wayland() {
   cp --preserve=links ${srcdir}/sdl2-install/usr/lib/libSDL2* $pkgdir/usr/lib/wineland/lib/
   rm -rf $pkgdir/usr/lib/libSDL2*
   rm -rf $pkgdir/usr/lib/wineland/*.a
-
-
-
 }
